@@ -88,7 +88,8 @@ def remove_last_conversation():
     conn = connect_db()
     with conn.cursor() as cursor:
         cursor.execute(
-            "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)")
+            "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)"
+        )
         cursor.commit()
     conn.close()
 
@@ -113,9 +114,9 @@ def create_vector_db(conversations):
 
     try:
         client.delete_collection(name=vector_db_name)
-    except ValueError:
-        pass
-
+    except Exception as e:
+        print(f"Error deleting collection: {e}")
+        # or log the error, or take some other appropriate action
     vector_db = client.create_collection(name=vector_db_name)
 
     for c in conversations:
@@ -126,7 +127,9 @@ def create_vector_db(conversations):
         embedding = response["embedding"]
 
         vector_db.add(
-            ids=[str(c["id"])], embeddings=[embedding], documents=[serialized_convo]
+            ids=[str(c["id"])],
+            embeddings=[embedding],
+            documents=[serialized_convo],
         )
 
 
