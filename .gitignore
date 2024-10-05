@@ -1,0 +1,23 @@
+# env variables
+.env
+# .env file
+.env
+*.env
+.env*
+.env.local
+.env.dev
+.env.test
+
+# tests
+/tests
+*/tests
+
+#  build outputs
+/build
+
+#  cache
+.cache
+ 
+#  python interpreter cache
+.venv
+git add .

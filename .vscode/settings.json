@@ -1,0 +1,22 @@
+{
+    "cSpell.words": [
+        "chromadb",
+        "convo",
+        "dotenv",
+        "multitenancy",
+        "multitenant",
+        "MVVM",
+        "nomic",
+        "ollama",
+        "permissioning",
+        "psycopg",
+        "qwen",
+        "signups",
+        "tqdm"
+    ],
+    "docwriter.language": "English",
+    "docwriter.progress.trackMethods": true,
+    "docwriter.progress.trackClasses": true,
+    "docwriter.progress.trackTypes": true,
+    "docwriter.progress.trackFunctions": true
+}
