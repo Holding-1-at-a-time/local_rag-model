@@ -1,22 +1,14 @@
+import ast
+import os
 import chromadb
 import ollama
 import psycopg
-from psycopg.rows import dict_row
 from colorama import Fore
-import os
-import ast
-from tqdm import tqdm
 from dotenv import load_dotenv
-
-# The `load_dotenv()` function is used to load environment variables from a .env file into the
-# script's environment. This allows the script to access sensitive information such as database
-# credentials without hardcoding them directly into the code.
+from psycopg.rows import dict_row
+from tqdm import tqdm
 
 load_dotenv()
-
-# The above code snippet appears to be setting up a Python script that involves creating a client for
-# a database (referred to as `chromadb`), defining a system prompt message, initializing a
-# conversation list (`convo`), and setting up database connection parameters (`DB_PARAMS`).
 
 client = chromadb.Client()
 
@@ -29,8 +21,6 @@ system_prompt = (
     "Self-Reflection: After providing a response, assess its effectiveness and consider whether additional clarification or detail could enhance user understanding. "
     "Respond Appropriately: If the context is not relevant, respond directly to the user, focusing on delivering precise and professional assistance as an intelligent AI assistant. "
 )
-# The code snippet you provided is initializing a conversation list named `convo` and setting up
-# database connection parameters in a dictionary named `DB_PARAMS`. Here's what each part is doing:
 
 convo = [{"role": "system", "content": system_prompt}]
 
@@ -114,9 +104,9 @@ def create_vector_db(conversations):
 
     try:
         client.delete_collection(name=vector_db_name)
-    except Exception as e:
-        print(f"Error deleting collection: {e}")
-        # or log the error, or take some other appropriate action
+    except ValueError:
+        pass
+
     vector_db = client.create_collection(name=vector_db_name)
 
     for c in conversations:
@@ -127,9 +117,7 @@ def create_vector_db(conversations):
         embedding = response["embedding"]
 
         vector_db.add(
-            ids=[str(c["id"])],
-            embeddings=[embedding],
-            documents=[serialized_convo],
+            ids=[str(c["id"])], embeddings=[embedding], documents=[serialized_convo]
         )
 
 
