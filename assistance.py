@@ -1,14 +1,4 @@
 import chromadb
-    """
-    The code provided is a Python script that implements an AI assistant capable of interacting with
-    users, storing conversations in a PostgreSQL database, utilizing embeddings for responses, and
-    generating search queries based on conversation history.
-    :return: The code provided is a Python script that serves as an AI assistant capable of interacting
-    with users through prompts and responses. It includes functionalities such as connecting to a
-    PostgreSQL database, fetching and storing conversations, utilizing embeddings for context analysis,
-    generating search queries for an embeddings database, and responding to user prompts based on the
-    analyzed context.
-    """
 import ollama
 import psycopg
 from psycopg.rows import dict_row
