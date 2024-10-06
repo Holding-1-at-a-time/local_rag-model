@@ -1,7 +1,8 @@
 import ast
 import os
+
 import chromadb
-import ollama
+import ollama   
 import psycopg
 from colorama import Fore
 from dotenv import load_dotenv
@@ -32,80 +33,55 @@ DB_PARAMS = {
     "port": os.getenv("DB_PORT"),
 }
 
-
-def connect_db() -> psycopg.Connection:
-    """
-    Connect to the PostgreSQL database.
-
-    Returns:
-        psycopg.Connection: An active connection to the database.
-    """
-    print("Connecting to database with params:", DB_PARAMS)
-    conn = None
-    try:
-        conn = psycopg.connect(**DB_PARAMS)
-        print("Connected to database")
-        return conn
-    except psycopg.Error as e:
-        print("Error connecting to database:", e)
-        raise
-    finally:
-        if conn is not None:
-            conn.close()
+def connect_db():  # sourcery skip: inline-immediately-returned-variable
+    conn = psycopg.connect
+    return conn
 
 
 def fetch_conversations():
-    print("Fetching conversations from database")
     conn = connect_db()
-    try:
-        with conn.cursor(row_factory=dict_row) as cursor:
-            cursor.execute("SELECT * FROM conversations")
-            conversations = cursor.fetchall()
-            print(f"Fetched {len(conversations)} conversations")
-        return conversations
-    finally:
-        conn.close()
+    with conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute("SELECT * FROM conversations")
+        conversations = cursor.fetchall()
+    conn.close()
+    return conversations
 
 
 def store_conversations(prompt, response):
     conn = connect_db()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO conversations (timestamp, prompt, response) VALUES (CURRENT_TIMESTAMP, %s, %s)",
-                (prompt, response),
-            )
-        conn.commit()
-        print(f"Stored conversation with prompt: {prompt}")
-    finally:
-        conn.close()
+    with conn.cursor() as cursor:
+        cursor.execute(
+           "INSERT INTO conversations (timestamp, prompt, response) VALUES (CURRENT_TIMESTAMP, %s, %s)",
+            (prompt, response),
+        )
+    conn.commit()
+    print(f"Stored conversation with prompt: {prompt}")
+    conn.close()
 
 
 def remove_last_conversation():
     conn = connect_db()
-    try:
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)"
-            )
-        conn.commit()
-    finally:
-        conn.close()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            'DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)'
+        )
+    cursor.commit()
+    conn.close()
 
 
 def stream_response(prompt):
-    response = ""
+    response = ' '
     stream = ollama.chat(model="llama3.1:8b", message=convo, stream=True)
-    print(Fore.CYAN + "\nASSISTANT:")
+    print(Fore.CYAN + '\nASSISTANT:')
 
     for chunk in stream:
-        content = chunk["message"]["content"]
+        content = chunk['message']['content']
         response += content
-        print(content, end="", flush=True)
+        print(content, end='', flush=True)
 
-    print("\n")
+    print('\n')
     store_conversations(prompt=prompt, response=response)
-    convo.append({"role": "assistant", "content": response})
+    convo.append({'role': 'assistant', 'content': response})
 
 
 def create_vector_db(conversations):
@@ -113,21 +89,21 @@ def create_vector_db(conversations):
 
     try:
         client.delete_collection(name=vector_db_name)
-    except chromadb.exceptions.InvalidArgument:
-        # Collection doesn't exist, so we can proceed
+    except ValueError:
         pass
 
     vector_db = client.create_collection(name=vector_db_name)
 
     for c in conversations:
-        print(f"Adding conversation with id: {c['id']} to vector db")
-        serialized_convo = f"prompt: {c['prompt']} response: {c['response']}"
+        serialized_convo = f'prompt: {c["prompt"]} response: {c["response"]}'
 
-        response = ollama.embeddings(model="nomic-embed-text", prompt=serialized_convo)
-        embedding = response["embedding"]
+        response = ollama.embeddings(model='nomic-embed-text', prompt=serialized_convo)
+        embedding = response['embedding']
 
         vector_db.add(
-            ids=[str(c["id"])], embeddings=[embedding], documents=[serialized_convo]
+            ids=[str(c["id"])],
+            embeddings=[embedding],
+            documents=[serialized_convo]
         )
 
 
@@ -213,12 +189,12 @@ def classify_embedding(query, context):
         {"role": "system", "content": classify_msg},
         {
             "role": "user",
-            "content": f"SEARCH QUERY: What is the users name? \n\nEMBEDDED CONTEXT: You are Robert Romero. How can I assist you?",
+            "content": f"SEARCH QUERY: What is the users name? \n\nEMBEDDED CONTEXT: You are Robert Romero. How can I assist you?",  # noqa: F541
         },
         {"role": "assistant", "content": "Yes"},
         {
             "role": "user",
-            "content": f"SEARCH QUERY: Llama3 voice assistant \n\nEMBEDDED CONTEXT: I am a voice assistant. How can I assist you?",
+            "content": f"SEARCH QUERY: Llama3 voice assistant \n\nEMBEDDED CONTEXT: I am a voice assistant. How can I assist you?",  # noqa: F541
         },
         {"role": "assistant", "content": "No"},
         {

@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "chromadb",
+        "codiumai",
         "convo",
         "dotenv",
         "multitenancy",
@@ -10,9 +11,13 @@
         "ollama",
         "permissioning",
         "psycopg",
+        "pytest",
+        "Pytest",
+        "qodo",
         "qwen",
         "signups",
-        "tqdm"
+        "tqdm",
+        "Vitest"
     ],
     "docwriter.language": "English",
     "docwriter.progress.trackMethods": true,
