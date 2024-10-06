@@ -41,6 +41,7 @@ def connect_db() -> psycopg.Connection:
         psycopg.Connection: An active connection to the database.
     """
     print("Connecting to database with params:", DB_PARAMS)
+    conn = None
     try:
         conn = psycopg.connect(**DB_PARAMS)
         print("Connected to database")
@@ -48,40 +49,48 @@ def connect_db() -> psycopg.Connection:
     except psycopg.Error as e:
         print("Error connecting to database:", e)
         raise
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def fetch_conversations():
     print("Fetching conversations from database")
     conn = connect_db()
-    with conn.cursor(row_factory=dict_row) as cursor:
-        cursor.execute("SELECT * FROM conversations")
-        conversations = cursor.fetchall()
-        print(f"Fetched {len(conversations)} conversations")
-
-    conn.close()
-    return conversations
+    try:
+        with conn.cursor(row_factory=dict_row) as cursor:
+            cursor.execute("SELECT * FROM conversations")
+            conversations = cursor.fetchall()
+            print(f"Fetched {len(conversations)} conversations")
+        return conversations
+    finally:
+        conn.close()
 
 
 def store_conversations(prompt, response):
     conn = connect_db()
-    with conn.cursor() as cursor:
-        cursor.execute(
-            "INSERT INTO conversations (timestamp, prompt, response) VALUES (CURRENT_TIMESTAMP, %s, %s)",
-            (prompt, response),
-        )
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO conversations (timestamp, prompt, response) VALUES (CURRENT_TIMESTAMP, %s, %s)",
+                (prompt, response),
+            )
         conn.commit()
-    print(f"Stored conversation with prompt: {prompt}")
-    conn.close()
+        print(f"Stored conversation with prompt: {prompt}")
+    finally:
+        conn.close()
 
 
 def remove_last_conversation():
     conn = connect_db()
-    with conn.cursor() as cursor:
-        cursor.execute(
-            "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)"
-        )
-        cursor.commit()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM conversations WHERE id = (SELECT MAX(id) FROM conversations)"
+            )
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def stream_response(prompt):
@@ -104,14 +113,15 @@ def create_vector_db(conversations):
 
     try:
         client.delete_collection(name=vector_db_name)
-    except ValueError:
+    except chromadb.exceptions.InvalidArgument:
+        # Collection doesn't exist, so we can proceed
         pass
 
     vector_db = client.create_collection(name=vector_db_name)
 
     for c in conversations:
         print(f"Adding conversation with id: {c['id']} to vector db")
-        serialized_convo = f'prompt: {c['prompt']} response: {c['response']}'
+        serialized_convo = f"prompt: {c['prompt']} response: {c['response']}"
 
         response = ollama.embeddings(model="nomic-embed-text", prompt=serialized_convo)
         embedding = response["embedding"]
@@ -204,12 +214,12 @@ def classify_embedding(query, context):
         {
             "role": "user",
             "content": f"SEARCH QUERY: What is the users name? \n\nEMBEDDED CONTEXT: You are Robert Romero. How can I assist you?",
-        },  # noqa: F541
+        },
         {"role": "assistant", "content": "Yes"},
         {
             "role": "user",
             "content": f"SEARCH QUERY: Llama3 voice assistant \n\nEMBEDDED CONTEXT: I am a voice assistant. How can I assist you?",
-        },  # noqa: F541
+        },
         {"role": "assistant", "content": "No"},
         {
             "role": "user",
@@ -237,26 +247,21 @@ def recall(prompt):
 conversations = fetch_conversations()
 create_vector_db(conversations=conversations)
 
-
 while True:
     prompt = input(Fore.WHITE + "USER: \n")
 
-    if prompt[:7].lower() == "/recall:":
+    if prompt.lower().startswith("/recall:"):
         prompt = prompt[8:]
         recall(prompt=prompt)
         stream_response(prompt=prompt)
-
-    elif prompt[:7] == "/forget:":
+    elif prompt.startswith("/forget:"):
         remove_last_conversation()
         convo = convo[:-2]
         print("\n")
-
-    elif prompt[:9].lower() == "/memorize:":
+    elif prompt.lower().startswith("/memorize:"):
         prompt = prompt[10:]
         store_conversations(prompt=prompt, response="memory stored")
         print("\n")
     else:
         convo.append({"role": "user", "content": prompt})
         stream_response(prompt=prompt)
-
-    stream_response(prompt=prompt)
