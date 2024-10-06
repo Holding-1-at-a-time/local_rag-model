@@ -14,9 +14,11 @@
 
 #  build outputs
 /build
-
-#  cache
-.cache
  
 #  python interpreter cache
 .venv
+ 
+#  generated code
+*.codiumai.*
+
+*.codiumai.local.toml
